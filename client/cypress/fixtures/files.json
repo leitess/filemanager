@@ -1,0 +1,15 @@
+[
+    {
+      "id": "1",
+      "filename": "documento.pdf",
+      "mimetype": "application/pdf",
+      "filesize": 102400
+    },
+    {
+      "id": "2",
+      "filename": "imagem.jpg",
+      "mimetype": "image/jpeg",
+      "filesize": 204800
+    }
+  ]
+  
