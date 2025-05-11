@@ -4,6 +4,8 @@ FileManager é uma aplicação para gerenciamento de arquivos que permite o cada
 listagem e download de arquivos, junto com seus metadados. O sistema oferece flexibilidade ao usuário, 
 permitindo tanto uploads diretos com metadados automáticos quanto cadastros manuais com upload opcional.
 
+Acesse a documentação completa [clicando aqui](https://leitess.github.io/filemanager/)
+
 ## 🚀 Funcionalidades
  - **Upload de arquivos e salvamento de seus metadados**
     - Nome do arquivo
