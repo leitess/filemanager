@@ -3,32 +3,37 @@ sidebar_position: 5
 ---
 
 # Upload de um arquivo
+
 Essa funcionalidade é a mais importante da aplicação, essa funcionalidade é a que dá valor ao cliente; é o diferencial desde projeto
-e o seu próposito.
+e o seu próposito. Testar primeiro e depois implementar essa funcionalidade ajudou a entender e facilitou o aprendizado sobre o conceito de _resumable upload_.
 
 Após ter definido a historia de usuários e os cenários de testes que farão dessa funcionalidade, uma funcionalidade bem sucedida.
 Pensar nos comportamentos do projeto, ajudou não só a garantir a qualidade, mas aprender a implementar essa funcionalidade. Mesmo
 que testar, para só então implementar, seja uma linha de racicionio fora da curva.
 
 ## Testes
-o conceito de *resumable upload*, consiste em garantir que o upload do arquivo não vai ser pedido, caso haja a queda de internet do
+
+o conceito de _resumable upload_, consiste em garantir que o upload do arquivo não vai ser pedido, caso haja a queda de internet do
 lado do cliente ou do lado do servidor. O que se sabe sobre esse conceito é que assim que o upload inicia é iniciado uma sessão:
 
 ```ts title="test/core/domain/file/services/UploadFile.service.spec.ts"
-it('when starts an upload session then metadata must be return', async () => {
-        const sessionId = 'session-upload-mock-10128376';
-        const metadata = {
-            filename: '1837373-video.mp4',
-            mimetype: 'video/mp4',
-            filesize: 1000000,
-            totalChunks: 3,
-        } as MetadataTypesMock;
+it("when starts an upload session then metadata must be return", async () => {
+  const sessionId = "session-upload-mock-10128376";
+  const metadata = {
+    filename: "1837373-video.mp4",
+    mimetype: "video/mp4",
+    filesize: 1000000,
+    totalChunks: 3,
+  } as MetadataTypesMock;
 
-        const session = await service.startUpload(sessionId, metadata);
+  const session = await service.startUpload(sessionId, metadata);
 
-        expect(dbMock.insertSession).toHaveBeenCalledWith(sessionId, expect.any(Object));
-        expect(session.metadata).toEqual(metadata);
-    });
+  expect(dbMock.insertSession).toHaveBeenCalledWith(
+    sessionId,
+    expect.any(Object)
+  );
+  expect(session.metadata).toEqual(metadata);
+});
 ```
 
 ```ts title="test/core/domain/file/services/UploadFile.service.mock.ts"
@@ -50,7 +55,7 @@ Após verificar se sessão foi salva no banco de dados, é retornado para o lado
 feito o upload.
 
 Com os metadados salvos com sucesso, se inicia o upload de cada parte do arquivo. O arquivo no lado do cliente será "quebrado" em
-diversas partes e cada "pedacinho" do arquivo deve ser armazenado. Além de que é necessario, verificar se cada parte está sendo 
+diversas partes e cada "pedacinho" do arquivo deve ser armazenado. Além de que é necessario, verificar se cada parte está sendo
 salva com sucesso; o que garante isso, é um array booleano, todo "pedacinho" salvo com sucesso, será salvo como `true` no array de
 booleanos, pelo contrário será `false`.
 
@@ -58,32 +63,39 @@ Em outras palavras, o proximo teste verifica isso. Quando a primeira parte é sa
 a terceira parte, o lado do servidor retorna para a segunda parte. Pois, quando o arquivo for montado, não esteja corrompido.
 
 ```ts title="test/core/domain/file/services/UploadFile.service.spec.ts"
-    it('when internet connection is down then try it again', async () => {
-        const sessionId = 'session-upload-mock-9384673';
-        
-        const session = {
-           sessionId,
-           metadata: {
-                filename: '1837373-text-test.txt',
-                mimetype: 'text/plain',
-                filesize: 1000000,
-                totalChunks: 3,
-           },
-           chunks: [],
-           completed: false,
-        } as UploadSessionTypesMock;
+it("when internet connection is down then try it again", async () => {
+  const sessionId = "session-upload-mock-9384673";
 
-        dbMock.findSession.mockResolvedValue(session);
+  const session = {
+    sessionId,
+    metadata: {
+      filename: "1837373-text-test.txt",
+      mimetype: "text/plain",
+      filesize: 1000000,
+      totalChunks: 3,
+    },
+    chunks: [],
+    completed: false,
+  } as UploadSessionTypesMock;
 
-        await service.uploadChunk(sessionId, 0, Buffer.from('part 1'));
-        
-        expect(storageMock.saveChunk).toHaveBeenCalledWith(sessionId, 0, expect.any(Buffer));
-        expect(dbMock.updateSession).toHaveBeenCalled();
+  dbMock.findSession.mockResolvedValue(session);
 
+  await service.uploadChunk(sessionId, 0, Buffer.from("part 1"));
 
-        await service.uploadChunk(sessionId, 1, Buffer.from('part 2'));
-        expect(storageMock.saveChunk).toHaveBeenCalledWith(sessionId, 1, expect.any(Buffer));
-    });
+  expect(storageMock.saveChunk).toHaveBeenCalledWith(
+    sessionId,
+    0,
+    expect.any(Buffer)
+  );
+  expect(dbMock.updateSession).toHaveBeenCalled();
+
+  await service.uploadChunk(sessionId, 1, Buffer.from("part 2"));
+  expect(storageMock.saveChunk).toHaveBeenCalledWith(
+    sessionId,
+    1,
+    expect.any(Buffer)
+  );
+});
 ```
 
 ```ts title="test/core/domain/file/services/UploadFile.service.mock.ts"
@@ -98,39 +110,40 @@ a terceira parte, o lado do servidor retorna para a segunda parte. Pois, quando 
     }
 ```
 
-Por isso, vamos a ultima parte do processo do *resumable upload*, quando todos os "pedacinhos" do arquivo for enviada com sucesso;
+Por isso, vamos a ultima parte do processo do _resumable upload_, quando todos os "pedacinhos" do arquivo for enviada com sucesso;
 o array booleano vai ficar preenchido de `true`. Então, é hora de juntar todas as partes.
 
 Este teste junta todas as partes e finaliza o teste com sucesso:
 
 ```ts title="test/core/domain/file/services/UploadFile.service.spec.ts"
+it("when assemble all chunks then complete upload", async () => {
+  const sessionId = "session-upload-mock-263532";
 
-    it('when assemble all chunks then complete upload', async () => {
-        const sessionId = 'session-upload-mock-263532';
+  const session = {
+    sessionId,
+    metadata: {
+      originalFilename: "succeed-test.txt",
+      filename: "1837373-succeed-test.txt",
+      mimetype: "text/plain",
+      filesize: 33000,
+    },
+    chunks: [true, true],
+    completed: false,
+  };
 
-        const session = {
-            sessionId,
-           metadata: {
-                originalFilename: 'succeed-test.txt',
-                filename: '1837373-succeed-test.txt',
-                mimetype: 'text/plain',
-                filesize: 33000,
-           },
-           chunks: [true, true],
-           completed: false,
-        };
+  dbMock.findSession.mockResolvedValue(session);
+  storageMock.assembleChunks.mockResolvedValue(Buffer.from("part1part2"));
 
-        dbMock.findSession.mockResolvedValue(session);
-        storageMock.assembleChunks.mockResolvedValue(Buffer.from('part1part2'));
+  const result = await service.completeUpload(sessionId);
 
-        const result = await service.completeUpload(sessionId);
-
-        expect(storageMock.save).toHaveBeenCalledWith(result.id, expect.any(Buffer));
-        expect(dbMock.insert).toHaveBeenCalledWith(expect.objectContaining({
-            filename: '1837373-succeed-test.txt',
-        }));
-        expect(dbMock.deleteSession).toHaveBeenCalledWith(sessionId);
-    });
+  expect(storageMock.save).toHaveBeenCalledWith(result.id, expect.any(Buffer));
+  expect(dbMock.insert).toHaveBeenCalledWith(
+    expect.objectContaining({
+      filename: "1837373-succeed-test.txt",
+    })
+  );
+  expect(dbMock.deleteSession).toHaveBeenCalledWith(sessionId);
+});
 ```
 
 ```ts title="test/core/domain/file/services/UploadFile.service.mock.ts"
@@ -176,9 +189,9 @@ Não será discutido nessa página os ultimos dois testes que visam em verificar
 por estar sendo usado mocks; os mocks não lidam muito bem com arquivos grandes, podem falhar mesmo se o teste estar escrito corretamente.
 
 Para realizar testes com arquivos grandes, o ideal é realizar um teste de carga, isso pode ser feito pelo frontend, `curl`,
-Postman, Insominia ou `supertest`. 
+Postman, Insominia ou `supertest`.
 
-Os testes não só ajudaram na implementação, mas também ajudaram a pensar em algumas refatorações, como por exemplo: escrever uma 
+Os testes não só ajudaram na implementação, mas também ajudaram a pensar em algumas refatorações, como por exemplo: escrever uma
 `interface` para o tipo de `Metadado` e `Sessão` do upload.
 
 ```ts title="test/core/domain/file/types/FileMetadata.types.mock.ts"
@@ -195,7 +208,7 @@ export interface FileMetadataTypesMock {
 ```ts title="test/core/domain/upload_session/types/UploadSessionMetadata.types.mock.ts"
 export interface MetadataTypesMock {
   filename: string;
-  mimetype: string,
+  mimetype: string;
   totalChunks: number;
 }
 
@@ -208,11 +221,12 @@ export interface UploadSessionTypesMock {
 ```
 
 ## Implementação
+
 A cada teste foi implementado a função real que foi testada, e foi pensado em usar GridFSBucket para poder armazenar arquivos grandes,
 esses arquivos embora estejam tendo suas partes salvas em uma pasta temporaria no backend. O arquivo final fica no MongoDB. GridFS é
-ideal para arquivos grandes. 
+ideal para arquivos grandes.
 
-Como foi planejado nos testes, primeiro é salvo a sessão no banco de dados. Abaixo está a implementação da funcionalidade tanto no 
+Como foi planejado nos testes, primeiro é salvo a sessão no banco de dados. Abaixo está a implementação da funcionalidade tanto no
 repositorio, quando na classe de serviço:
 
 ```ts title="src/core/domain/upload_session/repository/UploadSession.repository.ts"
@@ -284,7 +298,6 @@ async deleteSession(sessionId: string) {
     await FileModel.create(fileData);
   }
 ```
-
 
 ```ts title="src/infrastructure/gridfs/GridFsStorage.impl.ts"
   async assembleChunks(sessionId: string): Promise<Buffer> {
